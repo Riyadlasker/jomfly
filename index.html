@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>jomfly invoice</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* FIXED DESKTOP & MOBILE INVOICE SHEET DIMENSIONS */
+        .invoice-sheet {
+            width: 790px !important;
+            min-width: 790px !important;
+            max-width: 790px !important;
+            min-height: 1080px !important;
+            background-color: #ffffff !important;
+            transform-origin: top center;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .preview-outer-wrap {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* COMPACT STAMP */
+        .stamp-bottom-left {
+            width: 130px;
+            transform: rotate(-10deg);
+            opacity: 0.95;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.10));
+            transition: all 0.3s ease;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* PRINT RULES */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            html, body {
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+            }
+            #formSection {
+                display: none !important;
+            }
+            #previewSection {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .preview-outer-wrap {
+                overflow: visible !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                height: auto !important;
+            }
+            .invoice-sheet {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 30px 40px !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                transform: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-800 antialiased flex flex-col selection:bg-blue-600 selection:text-white">
+
+    <div id="appContainer" class="flex flex-col flex-1">
+        
+        <header class="bg-slate-900/95 border-b border-slate-800 text-white px-4 md:px-6 py-2.5 sticky top-0 z-50 flex flex-wrap justify-between items-center no-print backdrop-blur-md gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-md text-sm">
+                    ✈️
+                </div>
+                <div>
+                    <h1 class="font-black text-xs md:text-sm tracking-wide text-white leading-tight">jomfly invoice</h1>
+                    <div class="flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-[10px] text-slate-300 font-semibold uppercase tracking-wider">Automated Billing Portal</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="window.print()" class="text-xs bg-[#0b25b7] hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition active:scale-95">
+                    <i class="fa-solid fa-print"></i>
+                    <span>Print / Save PDF</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="moduleInvoice" class="block w-full">
+            <div class="lg:hidden bg-slate-900 border-b border-slate-800 p-2 flex justify-center space-x-2 sticky top-[53px] z-40 no-print">
+                <button id="tabFormBtn" onclick="switchMobileTab('form')" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-[#0b25b7] text-white flex items-center justify-center gap-1.5 shadow transition">
+                    <span>✍️</span> Edit Form
+                </button>
+                <button id="tabPreviewBtn" onclick="switchMobileTab('preview')" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition">
+                    <span>👁️</span> Preview
+                </button>
+            </div>
+
+            <main class="max-w-[1700px] w-full mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+                <!-- FORM SECTION -->
+                <div id="formSection" class="lg:col-span-5 space-y-4 no-print block">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 text-white space-y-3.5 shadow-xl">
+                        <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🏢</span> Agency Profile & Custom Logo
+                        </h2>
+                        <div class="space-y-2.5 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-1">Company Name</label>
+                                <input type="text" id="in_company" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition font-bold" oninput="renderInvoice()">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Address</label>
+                                <input type="text" id="in_address" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="text-slate-400 block mb-1">Telephone(s)</label>
+                                    <input type="text" id="in_tel" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 block mb-1">Email</label>
+                                    <input type="text" id="in_email" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                                </div>
+                            </div>
+                            <div class="pt-1">
+                                <label class="text-slate-400 block mb-1">Upload Custom Logo (Optional)</label>
+                                <input type="file" id="in_logo_file" accept="image/*" class="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-blue-300 hover:file:bg-slate-700 cursor-pointer" onchange="handleLogoUpload(event)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 text-white space-y-3.5 shadow-xl">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📋</span> Invoice Info & Live Automation
+                            </h2>
+                            <button type="button" onclick="autoFillLiveDates(true)" class="text-[11px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-xl shadow transition flex items-center gap-1.5 active:scale-95">
+                                <i class="fa-solid fa-bolt"></i> 1-Click Auto All Dates & No.
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div class="sm:col-span-2 bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <label class="text-slate-300 font-bold block">Payment Stamp Mode</label>
+                                    <span class="text-[11px] text-emerald-400 font-semibold">Live Preview Active</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" id="btnStampPaid" onclick="setPaymentStamp('PAID')" class="py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center justify-center gap-1.5 shadow transition">
+                                        <i class="fa-solid fa-stamp"></i> PAID
+                                    </button>
+                                    <button type="button" id="btnStampUnpaid" onclick="setPaymentStamp('UNPAID')" class="py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition">
+                                        <i class="fa-solid fa-stamp"></i> UNPAID
+                                    </button>
+                                    <button type="button" id="btnStampNone" onclick="setPaymentStamp('NONE')" class="py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition">
+                                        Hidden
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-slate-400 block mb-1">Branch Name</label>
+                                <input type="text" id="in_branch" placeholder="Optional" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-slate-400">Invoice Number</label>
+                                    <button type="button" onclick="generateNewInvoiceNumber()" class="text-[10px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                                        <i class="fa-solid fa-dice"></i> Auto Generate
+                                    </button>
+                                </div>
+                                <div class="relative flex items-center">
+                                    <input type="text" id="in_invoice" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 pr-8 text-white outline-none focus:border-blue-500 transition font-mono" oninput="renderInvoice()">
+                                    <button type="button" onclick="generateNewInvoiceNumber()" title="Auto Generate" class="absolute right-2 text-slate-400 hover:text-blue-400 text-xs">
+                                        <i class="fa-solid fa-rotate"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-slate-400">Submission Date (Live Auto)</label>
+                                    <button type="button" onclick="setDateSpecific('sub', 0)" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold">
+                                        📅 Today Auto
+                                    </button>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <input type="text" id="in_sub_date" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                                    <input type="date" id="picker_sub_date" class="w-full bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2 py-1 outline-none cursor-pointer" onchange="onPickerChange('sub', this.value)">
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-slate-400">Issue Date (Live Auto)</label>
+                                    <button type="button" onclick="setDateSpecific('issue', 0)" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold">
+                                        📅 Today Auto
+                                    </button>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <input type="text" id="in_issue_date" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                                    <input type="date" id="picker_issue_date" class="w-full bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2 py-1 outline-none cursor-pointer" onchange="onPickerChange('issue', this.value)">
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="text-slate-400">Flight Date (Live Auto)</label>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="setDateSpecific('flight', 1)" class="text-[10px] text-blue-400 hover:text-blue-300 font-semibold">
+                                            ✈️ +1 Day
+                                        </button>
+                                        <button type="button" onclick="setDateSpecific('flight', 3)" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold">
+                                            ✈️ +3 Days
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <input type="text" id="in_flight_date" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                                    <input type="date" id="picker_flight_date" class="w-full bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-xl px-2.5 py-2 outline-none cursor-pointer" onchange="onPickerChange('flight', this.value)">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-slate-400 block mb-1">Status</label>
+                                <input type="text" id="in_status" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition font-bold" oninput="renderInvoice()">
+                            </div>
+
+                            <div>
+                                <label class="text-slate-400 block mb-1">Reference Number</label>
+                                <input type="text" id="in_ref" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition font-mono" oninput="renderInvoice()">
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="text-slate-400 block mb-1">Currency</label>
+                                <input type="text" id="in_currency" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition font-bold" oninput="renderInvoice()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 text-white space-y-3.5 shadow-xl">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>👥</span> Passenger List & Fare
+                            </h2>
+                            <button onclick="addPassenger()" class="text-xs bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white font-semibold px-3 py-1.5 rounded-xl border border-blue-500/30 transition">
+                                + Add Passenger
+                            </button>
+                        </div>
+                        <div id="passenger_inputs" class="space-y-3"></div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-5 text-white space-y-3 shadow-xl">
+                        <h2 class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>💰</span> Additional Charges
+                        </h2>
+                        <div class="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-1">Ancillary Cost</label>
+                                <input type="number" id="in_ancillary" step="0.01" value="0.00" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 block mb-1">Misc Charge</label>
+                                <input type="number" id="in_misc" step="0.01" value="50.00" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-2.5 text-white outline-none focus:border-blue-500 transition" oninput="renderInvoice()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PREVIEW SECTION -->
+                <div id="previewSection" class="lg:col-span-7 hidden lg:block lg:sticky lg:top-20">
+                    <div id="previewWrapper" class="preview-outer-wrap">
+                        <div id="printableInvoice" class="invoice-sheet p-10 md:p-12 shadow-2xl rounded-sm border border-slate-200 text-slate-800 flex flex-col justify-between">
+                            
+                            <div>
+                                <div class="flex justify-between items-start">
+                                    <div id="logoContainer" class="flex flex-col items-start pt-1">
+                                        <!-- Crisp, Exact Embedded Jomfly Official Logo Vector -->
+                                        <div id="vectorLogo" class="flex items-center">
+                                            <svg class="w-56 h-24" viewBox="0 0 350 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <!-- "jom" text -->
+                                                <g fill="#0066FF">
+                                                    <!-- j -->
+                                                    <circle cx="34" cy="40" r="7.5"/>
+                                                    <path d="M26.5 54.5 H41.5 V104.5 C41.5 116.5 34 122.5 21 122.5 C15.5 122.5 10 121 6.5 119 L9.5 108 C12 109.5 15.5 110.5 19 110.5 C24.5 110.5 26.5 108 26.5 102 V54.5 Z"/>
+                                                    <!-- o -->
+                                                    <path d="M68 53 C83 53 94 64.5 94 82 C94 99.5 83 111 68 111 C53 111 42 99.5 42 82 C42 64.5 53 53 68 53 Z M68 64.5 C59.5 64.5 54.5 72 54.5 82 C54.5 92 59.5 99.5 68 99.5 C76.5 99.5 81.5 92 81.5 82 C81.5 72 76.5 64.5 68 64.5 Z"/>
+                                                    <!-- m -->
+                                                    <path d="M99 54.5 H111.5 V63 C115 56.5 121.5 53 129.5 53 C136.5 53 142 56 145 62 C149 56 155.5 53 164 53 C176 53 182 60 182 72.5 V109.5 H169.5 V74.5 C169.5 67 166 64 160.5 64 C154.5 64 150.5 68 150.5 76 V109.5 H138 V74.5 C138 67 134.5 64 129 64 C123 64 119 68 119 76 V109.5 H106.5 V54.5 H99 Z"/>
+                                                    <!-- f -->
+                                                    <path d="M208 41 C213 41 217 42 220 44 L217.5 54.5 C215 53.5 212.5 53 210 53 C205.5 53 203.5 55.5 203.5 61.5 V64.5 H219 V75.5 H203.5 V109.5 H191 V75.5 H181 V64.5 H191 V60 C191 47.5 197 41 208 41 Z"/>
+                                                    <!-- l -->
+                                                    <path d="M226.5 35 H239 V109.5 H226.5 V35 Z"/>
+                                                    <!-- y -->
+                                                    <path d="M244 54.5 H257 L267.5 87 L278 54.5 H290.5 L273.5 101.5 C267 119.5 261 123 249 122.5 L247 111.5 C253 112 257 110 260.5 101 L262 96.5 L244 54.5 Z"/>
+                                                </g>
+                                                <!-- Flying Paper Airplane -->
+                                                <path d="M262 36 L325 14 L306 60 L287 47 L278 57 L275 48 L262 36 Z" fill="#0066FF"/>
+                                                <!-- Dynamic Ascending Trail Swoosh -->
+                                                <path d="M276 49 C260 75 250 115 178 120 C235 122 288 95 303 50" fill="#0066FF"/>
+                                            </svg>
+                                        </div>
+                                        <img id="customLogoImg" class="max-h-24 object-contain hidden" alt="Agency Logo">
+                                    </div>
+
+                                    <div class="text-left text-[11px] leading-[1.45] text-slate-700 max-w-[420px]">
+                                        <h2 class="text-lg font-bold text-[#091a8e] tracking-tight mb-1" id="out_company">jomfly</h2>
+                                        <p class="mb-1"><strong>Address:</strong> <span id="out_address" class="text-slate-600">Southgate Commercial Centre Level G, Block E, No 2, Jalan Dua, Off, Jalan Chan Sow Lin, 55200, Wilayah Persekutuan Kuala Lumpur</span></p>
+                                        <p class="mb-0.5"><strong>Tel:</strong> <span id="out_tel" class="text-slate-600">+60 177733308, 107044401</span></p>
+                                        <p><strong>Email:</strong> <span id="out_email" class="text-slate-600">myjomfly@gmail.com</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="relative my-7 text-center">
+                                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                                    <div class="relative flex justify-center">
+                                        <span class="bg-white px-8 text-2xl font-black tracking-wider text-[#023eac]">INVOICE</span>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl p-5 border border-[#e0e7ff] grid grid-cols-2 gap-x-12 gap-y-2.5 text-[12px] bg-[#f2f5fd]">
+                                    <div class="space-y-2.5">
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Branch Name</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_branch"></span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Invoice Number</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_invoice">689952</span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Reference Number</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_ref">NZ4978785129628428</span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Issue Date</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_issue_date">23 Aug 26</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2.5">
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Submission Date</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_sub_date">26 Aug 2026</span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Status</span>
+                                            <span class="text-slate-900 font-bold flex-1 flex"><span class="mr-2.5">:</span><span id="out_status">CONFIRMED</span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Currency</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_currency">MYR</span></span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="text-slate-600 min-w-[140px]">Flight Date</span>
+                                            <span class="text-slate-800 font-semibold flex-1 flex"><span class="mr-2.5">:</span><span id="out_flight_date">27 Aug 26</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 border border-[#e0e7ff] rounded-xl p-4 bg-[#f2f5fd]">
+                                    <h3 class="text-base font-bold text-slate-800 mb-3 tracking-tight">Passenger Details</h3>
+                                    <table class="w-full text-[11px] text-left bg-white rounded-md overflow-hidden border border-slate-200 shadow-sm">
+                                        <thead class="bg-[#0b25b7] text-white">
+                                            <tr>
+                                                <th class="py-2.5 px-3 font-bold w-12 text-center text-white">S/N</th>
+                                                <th class="py-2.5 px-3 font-bold text-white">Passenger Name</th>
+                                                <th class="py-2.5 px-3 font-bold text-white text-center">Class</th>
+                                                <th class="py-2.5 px-3 font-bold text-white text-center">Route</th>
+                                                <th class="py-2.5 px-3 font-bold text-white text-center">PNR</th>
+                                                <th class="py-2.5 px-3 text-right font-bold text-white">Total (Including Tax)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="out_invoice_table" class="divide-y divide-slate-200"></tbody>
+                                        <tfoot>
+                                            <tr class="font-bold border-t border-slate-300 text-slate-900 bg-[#f9fafb]">
+                                                <td colspan="5" class="py-2.5 px-3 text-left">Total:</td>
+                                                <td class="py-2.5 px-3 text-right font-extrabold" id="out_table_total">2,398.00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <div class="mt-8 flex justify-between items-center">
+                                    <!-- COMPACT STAMP PLACED EXACTLY IN MARKED AREA -->
+                                    <div class="flex-1 flex items-center justify-center pl-8">
+                                        <img id="stampImage" src="" class="stamp-bottom-left hidden" alt="Stamp">
+                                    </div>
+
+                                    <!-- TOTAL AMOUNT SECTION -->
+                                    <div class="w-72 text-[12px] space-y-2">
+                                        <div class="flex justify-between text-slate-600">
+                                            <span>Subtotal:</span>
+                                            <span class="font-semibold text-slate-800" id="out_subtotal">2,398.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-slate-600">
+                                            <span>Ancillary Cost:</span>
+                                            <span class="font-semibold text-slate-800" id="out_ancillary">0.00</span>
+                                        </div>
+                                        <div class="flex justify-between text-slate-600">
+                                            <span>Misc Charge:</span>
+                                            <span class="font-semibold text-slate-800" id="out_misc">50.00</span>
+                                        </div>
+                                        <div class="border-t border-slate-300 pt-2.5 flex justify-between font-black text-base text-slate-900">
+                                            <span>Total Payable Amount:</span>
+                                            <span id="out_total_payable">2,448.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 border-b border-slate-200 pb-3">
+                                    <p class="text-[13px] text-slate-800">
+                                        <strong>Amount in word:</strong> <span class="font-bold text-slate-900" id="out_amount_words">Two Thousand Four Hundred Forty Eight</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-20 flex justify-between text-[11px] text-slate-500 pt-6">
+                                <div class="pt-1.5 w-40 text-left font-medium">Verified By</div>
+                                <div class="pt-1.5 w-40 text-right font-medium">Approved by</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const STAMP_PAID_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 350'><rect x='20' y='20' width='560' height='310' rx='25' fill='none' stroke='%2316a34a' stroke-width='22'/><rect x='36' y='36' width='528' height='278' rx='18' fill='none' stroke='%2316a34a' stroke-width='8'/><text x='300' y='225' font-family='Arial Black,Impact,sans-serif' font-weight='900' font-size='165' fill='%2316a34a' text-anchor='middle' letter-spacing='10'>PAID</text></svg>";
+        const STAMP_UNPAID_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 350'><rect x='20' y='20' width='560' height='310' rx='25' fill='none' stroke='%23dc2626' stroke-width='22'/><rect x='36' y='36' width='528' height='278' rx='18' fill='none' stroke='%23dc2626' stroke-width='8'/><text x='300' y='225' font-family='Arial Black,Impact,sans-serif' font-weight='900' font-size='130' fill='%23dc2626' text-anchor='middle' letter-spacing='4'>UNPAID</text></svg>";
+
+        let currentStampMode = "PAID";
+        const monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        function getFormattedDate(d, formatType = 'full') {
+            const dayNum = String(d.getDate()).padStart(2, '0');
+            const month = monthsShort[d.getMonth()];
+            const year = d.getFullYear();
+            const shortYear = String(year).slice(-2);
+
+            if (formatType === 'full') return `${dayNum} ${month} ${year}`;
+            if (formatType === 'short') return `${dayNum} ${month} ${shortYear}`;
+            return `${dayNum} ${month} ${year}`;
+        }
+
+        function toPickerDateValue(dateObj) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+        }
+
+        let invoicePassengers = [];
+
+        function setPaymentStamp(mode) {
+            currentStampMode = mode;
+            const btnP = document.getElementById('btnStampPaid');
+            const btnU = document.getElementById('btnStampUnpaid');
+            const btnN = document.getElementById('btnStampNone');
+
+            btnP.className = "py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition";
+            btnU.className = "py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition";
+            btnN.className = "py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition";
+
+            const stampImg = document.getElementById('stampImage');
+
+            if (mode === 'PAID') {
+                btnP.className = "py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white flex items-center justify-center gap-1.5 shadow transition";
+                stampImg.src = STAMP_PAID_IMG;
+                stampImg.classList.remove('hidden');
+                document.getElementById('in_status').value = "PAID - CONFIRMED";
+            } else if (mode === 'UNPAID') {
+                btnU.className = "py-2 px-3 rounded-lg text-xs font-bold bg-rose-600 text-white flex items-center justify-center gap-1.5 shadow transition";
+                stampImg.src = STAMP_UNPAID_IMG;
+                stampImg.classList.remove('hidden');
+                document.getElementById('in_status').value = "UNPAID - DUE";
+            } else {
+                btnN.className = "py-2 px-3 rounded-lg text-xs font-bold bg-blue-600 text-white flex items-center justify-center gap-1.5 shadow transition";
+                stampImg.classList.add('hidden');
+                document.getElementById('in_status').value = "CONFIRMED";
+            }
+            renderInvoice();
+        }
+
+        /* DYNAMIC AUTO-SCALING */
+        function autoScaleInvoice() {
+            const container = document.getElementById('previewWrapper');
+            const sheet = document.getElementById('printableInvoice');
+            if (!container || !sheet) return;
+
+            const targetWidth = 790;
+            const containerWidth = container.clientWidth || (window.innerWidth - 32);
+
+            let scale = 1;
+            if (containerWidth < targetWidth) {
+                scale = containerWidth / targetWidth;
+            }
+
+            sheet.style.transform = `scale(${scale})`;
+            sheet.style.transformOrigin = 'top center';
+            container.style.height = `${(sheet.offsetHeight * scale) + 20}px`;
+        }
+
+        window.addEventListener('resize', autoScaleInvoice);
+        window.addEventListener('orientationchange', autoScaleInvoice);
+
+        function switchMobileTab(tab) {
+            const formSec = document.getElementById('formSection');
+            const prevSec = document.getElementById('previewSection');
+            const formBtn = document.getElementById('tabFormBtn');
+            const prevBtn = document.getElementById('tabPreviewBtn');
+
+            if (tab === 'form') {
+                formSec.classList.remove('hidden');
+                formSec.classList.add('block');
+                prevSec.classList.add('hidden');
+                prevSec.classList.remove('block');
+                formBtn.className = "flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-[#0b25b7] text-white flex items-center justify-center gap-1.5 shadow transition";
+                prevBtn.className = "flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition";
+            } else {
+                formSec.classList.add('hidden');
+                formSec.classList.remove('block');
+                prevSec.classList.remove('hidden');
+                prevSec.classList.add('block');
+                prevBtn.className = "flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-[#0b25b7] text-white flex items-center justify-center gap-1.5 shadow transition";
+                formBtn.className = "flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1.5 transition";
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(autoScaleInvoice, 50);
+            }
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('customLogoImg');
+                    const vector = document.getElementById('vectorLogo');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    vector.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function generateNewInvoiceNumber() {
+            const randomNum = Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('in_invoice').value = randomNum;
+            renderInvoice();
+        }
+
+        function setDateSpecific(type, daysOffset = 0) {
+            const targetDate = new Date();
+            targetDate.setDate(targetDate.getDate() + daysOffset);
+
+            if (type === 'sub') {
+                document.getElementById('in_sub_date').value = getFormattedDate(targetDate, 'full');
+                const picker = document.getElementById('picker_sub_date');
+                if (picker) picker.value = toPickerDateValue(targetDate);
+            } else if (type === 'issue') {
+                document.getElementById('in_issue_date').value = getFormattedDate(targetDate, 'short');
+                const picker = document.getElementById('picker_issue_date');
+                if (picker) picker.value = toPickerDateValue(targetDate);
+            } else if (type === 'flight') {
+                document.getElementById('in_flight_date').value = getFormattedDate(targetDate, 'short');
+                const picker = document.getElementById('picker_flight_date');
+                if (picker) picker.value = toPickerDateValue(targetDate);
+            }
+            renderInvoice();
+        }
+
+        function onPickerChange(type, isoDate) {
+            if (!isoDate) return;
+            const d = new Date(isoDate);
+            if (isNaN(d.getTime())) return;
+
+            if (type === 'sub') {
+                document.getElementById('in_sub_date').value = getFormattedDate(d, 'full');
+            } else if (type === 'issue') {
+                document.getElementById('in_issue_date').value = getFormattedDate(d, 'short');
+            } else if (type === 'flight') {
+                document.getElementById('in_flight_date').value = getFormattedDate(d, 'short');
+            }
+            renderInvoice();
+        }
+
+        function autoFillLiveDates(regenNumber = false) {
+            const now = new Date();
+            const flightDay = new Date();
+            flightDay.setDate(now.getDate() + 1);
+
+            document.getElementById('in_sub_date').value = getFormattedDate(now, 'full');
+            document.getElementById('in_issue_date').value = getFormattedDate(now, 'short');
+            document.getElementById('in_flight_date').value = getFormattedDate(flightDay, 'short');
+
+            const pSub = document.getElementById('picker_sub_date');
+            const pIss = document.getElementById('picker_issue_date');
+            const pFli = document.getElementById('picker_flight_date');
+            if (pSub) pSub.value = toPickerDateValue(now);
+            if (pIss) pIss.value = toPickerDateValue(now);
+            if (pFli) pFli.value = toPickerDateValue(flightDay);
+
+            if (regenNumber) {
+                generateNewInvoiceNumber();
+                document.getElementById('in_ref').value = "NZ" + Math.floor(1000000000000000 + Math.random() * 9000000000000000);
+            }
+            renderInvoice();
+        }
+
+        function loadDefaultInvoiceData() {
+            document.getElementById('in_company').value = "jomfly";
+            document.getElementById('in_address').value = "Southgate Commercial Centre Level G, Block E, No 2, Jalan Dua, Off, Jalan Chan Sow Lin, 55200, Wilayah Persekutuan Kuala Lumpur";
+            document.getElementById('in_tel').value = "+60 177733308, 107044401";
+            document.getElementById('in_email').value = "myjomfly@gmail.com";
+            document.getElementById('in_branch').value = "";
+            document.getElementById('in_status').value = "PAID - CONFIRMED";
+            document.getElementById('in_currency').value = "MYR";
+            document.getElementById('in_ancillary').value = "0.00";
+            document.getElementById('in_misc').value = "50.00";
+
+            autoFillLiveDates(true);
+
+            // Default Demo Passengers
+            invoicePassengers = [
+                { name: 'MR BOZLUR RAHMAN', classType: 'Economy', route: 'DAC - KUL', pnr: 'FYVMNX', fare: 1199.00 },
+                { name: 'MR MAZNIE MAT ISA BINTI ABDUL RAZZAQ', classType: 'Economy', route: 'DAC - KUL', pnr: 'FYVMNX', fare: 1199.00 }
+            ];
+
+            renderPassengerInputs();
+            setPaymentStamp('PAID');
+            renderInvoice();
+        }
+
+        function renderPassengerInputs() {
+            const container = document.getElementById('passenger_inputs');
+            container.innerHTML = '';
+            invoicePassengers.forEach((p, index) => {
+                container.innerHTML += `
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 relative text-xs">
+                        <div class="flex justify-between items-center text-[11px] font-bold text-slate-400">
+                            <span>Passenger #${index + 1}</span>
+                            ${invoicePassengers.length > 1 ? `
+                                <button onclick="removePassenger(${index})" class="text-rose-400 hover:text-rose-300 font-semibold">✕ Remove</button>
+                            ` : ''}
+                        </div>
+                        <input type="text" placeholder="Full Name" value="${p.name}" oninput="invoicePassengers[${index}].name = this.value; renderInvoice();" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 outline-none focus:border-blue-500">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" placeholder="Class" value="${p.classType}" oninput="invoicePassengers[${index}].classType = this.value; renderInvoice();" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 outline-none">
+                            <input type="text" placeholder="Route" value="${p.route}" oninput="invoicePassengers[${index}].route = this.value; renderInvoice();" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 outline-none">
+                            <input type="text" placeholder="PNR" value="${p.pnr}" oninput="invoicePassengers[${index}].pnr = this.value; renderInvoice();" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 outline-none">
+                            <input type="number" placeholder="Fare" value="${p.fare || ''}" step="0.01" oninput="invoicePassengers[${index}].fare = parseFloat(this.value) || 0; renderInvoice();" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-2 outline-none">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function addPassenger() {
+            invoicePassengers.push({ name: '', classType: 'Economy', route: 'DAC - KUL', pnr: '', fare: 0 });
+            renderPassengerInputs();
+            renderInvoice();
+        }
+
+        function removePassenger(index) {
+            invoicePassengers.splice(index, 1);
+            renderPassengerInputs();
+            renderInvoice();
+        }
+
+        function numberToWords(amount) {
+            const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+            function convert(n) {
+                if (n === 0) return "";
+                if (n < 20) return units[n];
+                if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + units[n % 10] : "");
+                if (n < 1000) return units[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " " + convert(n % 100) : "");
+                if (n < 100000) return convert(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + convert(n % 1000) : "");
+                if (n < 10000000) return convert(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + convert(n % 100000) : "");
+                return n.toString();
+            }
+
+            const intVal = Math.floor(amount);
+            const decVal = Math.round((amount - intVal) * 100);
+            if (intVal === 0 && decVal === 0) return "Zero";
+            let result = "";
+            if (intVal > 0) result += convert(intVal);
+            if (decVal > 0) result += (result ? " and " : "") + convert(decVal) + " Cents";
+            return result.trim();
+        }
+
+        function formatCurrency(val) {
+            return Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderInvoice() {
+            document.getElementById('out_company').innerText = document.getElementById('in_company').value || 'jomfly';
+            document.getElementById('out_address').innerText = document.getElementById('in_address').value;
+            document.getElementById('out_tel').innerText = document.getElementById('in_tel').value;
+            document.getElementById('out_email').innerText = document.getElementById('in_email').value;
+            document.getElementById('out_invoice').innerText = document.getElementById('in_invoice').value;
+            document.getElementById('out_ref').innerText = document.getElementById('in_ref').value;
+            document.getElementById('out_branch').innerText = document.getElementById('in_branch').value;
+            document.getElementById('out_status').innerText = document.getElementById('in_status').value;
+            document.getElementById('out_sub_date').innerText = document.getElementById('in_sub_date').value;
+            document.getElementById('out_issue_date').innerText = document.getElementById('in_issue_date').value;
+            document.getElementById('out_flight_date').innerText = document.getElementById('in_flight_date').value;
+            document.getElementById('out_currency').innerText = document.getElementById('in_currency').value;
+
+            const tbody = document.getElementById('out_invoice_table');
+            tbody.innerHTML = '';
+            let subtotal = 0;
+
+            invoicePassengers.forEach((p, idx) => {
+                const fareVal = parseFloat(p.fare) || 0;
+                subtotal += fareVal;
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="py-2.5 px-3 text-center text-slate-700 font-medium">${idx + 1}</td>
+                        <td class="py-2.5 px-3 uppercase font-semibold text-slate-900">${p.name || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-700 text-center">${p.classType || '-'}</td>
+                        <td class="py-2.5 px-3 font-bold text-slate-900 text-center">${p.route || '-'}</td>
+                        <td class="py-2.5 px-3 text-slate-700 uppercase font-mono text-center">${p.pnr || '-'}</td>
+                        <td class="py-2.5 px-3 text-right font-medium text-slate-900">${formatCurrency(fareVal)}</td>
+                    </tr>
+                `;
+            });
+
+            const ancillary = parseFloat(document.getElementById('in_ancillary').value) || 0;
+            const misc = parseFloat(document.getElementById('in_misc').value) || 0;
+            const total = subtotal + ancillary + misc;
+
+            document.getElementById('out_table_total').innerText = formatCurrency(subtotal);
+            document.getElementById('out_subtotal').innerText = formatCurrency(subtotal);
+            document.getElementById('out_ancillary').innerText = formatCurrency(ancillary);
+            document.getElementById('out_misc').innerText = formatCurrency(misc);
+            document.getElementById('out_total_payable').innerText = formatCurrency(total);
+            document.getElementById('out_amount_words').innerText = numberToWords(total);
+
+            autoScaleInvoice();
+        }
+
+        window.onload = function() {
+            loadDefaultInvoiceData();
+            setTimeout(autoScaleInvoice, 100);
+        };
+    </script>
+</body>
+</html>
